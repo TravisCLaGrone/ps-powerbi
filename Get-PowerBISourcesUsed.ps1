@@ -1,6 +1,6 @@
 #Requires -Version '5.1'
 [CmdletBinding(PositionalBinding=$false, DefaultParameterSetName='Path')]
-[OutputType([String])]
+[OutputType([PSCustomObject])]
 param (
 	[Parameter(Mandatory, Position=0, ParameterSetName='Path', HelpMessage='A .pbix or .pbit file.')]
 	[String]
@@ -37,7 +37,9 @@ begin {
 		$DataModelSchemaFile = Join-Path $TempDir 'DataModelSchema'
 		$Content = Get-Content -LiteralPath $DataModelSchemaFile -Encoding 'unicode' -Raw
 
-		Write-Output $content | jq @'
+		$SourcesJson = @(
+			Write-Output $content |
+			jq @'
 [.
 	| .model
 	| .tables[] | . as $tbl
@@ -53,5 +55,10 @@ begin {
 | unique
 | sort_by([.SourceQueryName, .SourceColumnName])
 '@
+		) -join $([System.Environment]::NewLine)
+
+		$SourcesObjects = Write-Output $SourcesJson | ConvertFrom-Json
+
+		$SourcesObjects
 	}
 }
